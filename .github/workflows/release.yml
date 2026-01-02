@@ -13,14 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build release
-        run: swift build -c release
+      - name: Build release (arm64)
+        run: swift build -c release --arch arm64
 
       - name: Create app bundle
         run: |
           mkdir -p OpenWith.app/Contents/MacOS
           mkdir -p OpenWith.app/Contents/Resources
-          cp .build/release/OpenWith OpenWith.app/Contents/MacOS/
+          cp .build/arm64-apple-macosx/release/OpenWith OpenWith.app/Contents/MacOS/
           VERSION="${GITHUB_REF_NAME#v}"
           cat > OpenWith.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -53,7 +53,43 @@ jobs:
 
       - name: Create DMG
         run: |
-          hdiutil create -volname "OpenWith" -srcfolder OpenWith.app -ov -format UDZO OpenWith.dmg
+          # Create staging directory
+          mkdir -p dmg-staging
+          cp -R OpenWith.app dmg-staging/
+          ln -s /Applications dmg-staging/Applications
+
+          # Create temporary DMG
+          hdiutil create -volname "OpenWith" -srcfolder dmg-staging -ov -format UDRW temp.dmg
+
+          # Mount and customize
+          hdiutil attach temp.dmg -mountpoint /Volumes/OpenWith
+
+          # Set window properties with AppleScript
+          osascript << 'APPLESCRIPT'
+          tell application "Finder"
+            tell disk "OpenWith"
+              open
+              set current view of container window to icon view
+              set toolbar visible of container window to false
+              set statusbar visible of container window to false
+              set bounds of container window to {400, 200, 900, 500}
+              set theViewOptions to icon view options of container window
+              set arrangement of theViewOptions to not arranged
+              set icon size of theViewOptions to 80
+              set position of item "OpenWith.app" of container window to {125, 150}
+              set position of item "Applications" of container window to {375, 150}
+              close
+              open
+              update without registering applications
+            end tell
+          end tell
+          APPLESCRIPT
+
+          # Finalize
+          sync
+          hdiutil detach /Volumes/OpenWith
+          hdiutil convert temp.dmg -format UDZO -o OpenWith.dmg
+          rm temp.dmg
 
       - name: Create release
         uses: softprops/action-gh-release@v2
