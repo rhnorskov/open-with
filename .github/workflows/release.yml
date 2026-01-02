@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Create app bundle
+        run: |
+          mkdir -p OpenWith.app/Contents/MacOS
+          mkdir -p OpenWith.app/Contents/Resources
+          cp .build/release/OpenWith OpenWith.app/Contents/MacOS/
+          VERSION="${GITHUB_REF_NAME#v}"
+          cat > OpenWith.app/Contents/Info.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>OpenWith</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.rhnorskov.OpenWith</string>
+              <key>CFBundleName</key>
+              <string>OpenWith</string>
+              <key>CFBundleDisplayName</key>
+              <string>OpenWith</string>
+              <key>CFBundleVersion</key>
+              <string>${VERSION}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${VERSION}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>26.0</string>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+              <key>LSUIElement</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "OpenWith" -srcfolder OpenWith.app -ov -format UDZO OpenWith.dmg
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            OpenWith.dmg
+          generate_release_notes: true
