@@ -21,6 +21,7 @@ jobs:
           mkdir -p OpenWith.app/Contents/MacOS
           mkdir -p OpenWith.app/Contents/Resources
           cp .build/arm64-apple-macosx/release/OpenWith OpenWith.app/Contents/MacOS/
+          cp OpenWith/Resources/AppIcon.icns OpenWith.app/Contents/Resources/
           VERSION="${GITHUB_REF_NAME#v}"
           cat > OpenWith.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -29,6 +30,8 @@ jobs:
           <dict>
               <key>CFBundleExecutable</key>
               <string>OpenWith</string>
+              <key>CFBundleIconFile</key>
+              <string>AppIcon</string>
               <key>CFBundleIdentifier</key>
               <string>com.rhnorskov.OpenWith</string>
               <key>CFBundleName</key>
