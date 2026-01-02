@@ -51,6 +51,9 @@ jobs:
           </plist>
           EOF
 
+      - name: Ad-hoc code sign
+        run: codesign --force --deep --sign - OpenWith.app
+
       - name: Create DMG
         run: |
           # Create staging directory
